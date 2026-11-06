@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>원고 문자 검사</title>
+<meta name="description" content="원고(hwp·hwpx·docx)에서 비표준 가운뎃점·강희부수 문자·한글 전용 문자 등 출력 문제 문자를 찾아 수정본을 만드는 미술사연구회 출판부 도구">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&family=Nanum+Myeongjo:wght@700;800&display=swap">
+<style>
+/* 원고지 칸과 교정 빨간펜: 문제 글자는 칸에 넣고 붉은 원으로 표시한다 */
+:root{
+  --paper:#F5F8F5; --card:#FFFFFF; --ink:#1E2A23; --muted:#5B6B61;
+  --grid:#D3E3D7; --grid-strong:#8FB59A; --rule:#DDE7DF;
+  --red:#C0392B; --red-soft:#FBE9E6; --ok:#2C7A4B; --ok-soft:#E3F2E8;
+  --amber:#8A6100; --amber-soft:#FBF1D9; --chip:#EEF3EF;
+  --serif:"Nanum Myeongjo","Noto Serif KR","Apple SD Gothic Neo",serif;
+  --sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#111714; --card:#18201B; --ink:#E3EBE5; --muted:#97A99D;
+  --grid:#24352A; --grid-strong:#3F6A4E; --rule:#2A3830;
+  --red:#E8705F; --red-soft:#3A201C; --ok:#6CC791; --ok-soft:#1C3325;
+  --amber:#E2B85A; --amber-soft:#33291A; --chip:#202B24; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111714; --card:#18201B; --ink:#E3EBE5; --muted:#97A99D;
+  --grid:#24352A; --grid-strong:#3F6A4E; --rule:#2A3830;
+  --red:#E8705F; --red-soft:#3A201C; --ok:#6CC791; --ok-soft:#1C3325;
+  --amber:#E2B85A; --amber-soft:#33291A; --chip:#202B24; color-scheme:dark}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 64px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:grid;gap:28px}
+.wrap,#results,.card{grid-template-columns:minmax(0,1fr)}
+.wrap>*,#results>*,.card>*{min-width:0}
+header{display:grid;gap:12px}
+h1{margin:0;display:flex;flex-wrap:wrap;gap:0;font-family:var(--serif);font-weight:800;font-size:clamp(26px,6vw,40px);line-height:1}
+h1 .c{width:1.35em;height:1.35em;display:grid;place-items:center;border:1px solid var(--grid-strong);margin:0 -1px -1px 0;background:var(--card)}
+h1 .c.sp{background:transparent;border-color:var(--grid)}
+.lede{margin:0;max-width:62ch;color:var(--muted);text-wrap:pretty}
+.lede b{color:var(--ink);font-weight:600}
+.privacy{display:flex;gap:8px;align-items:baseline;font-size:13px;color:var(--muted);margin:0}
+.privacy::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none;transform:translateY(-1px)}
+
+.drop{position:relative;display:grid;gap:6px;place-items:center;text-align:center;padding:36px 20px;border:1.5px dashed var(--grid-strong);border-radius:6px;cursor:pointer;
+  background-color:var(--card);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:26px 26px;background-position:-1px -1px;transition:border-color .15s}
+.drop:hover,.drop.over{border-color:var(--red)}
+.drop:focus-within{outline:2px solid var(--red);outline-offset:3px}
+.drop strong{font-family:var(--serif);font-size:20px;font-weight:700;background:var(--card);padding:2px 10px}
+.drop span{font-size:13px;color:var(--muted);background:var(--card);padding:0 8px}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.steps li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:14px}
+.steps .n{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--grid-strong);font-family:var(--serif);font-weight:800;background:var(--card)}
+.steps p{margin:2px 0 0;min-width:0}
+@media (max-width:720px){.steps{grid-template-columns:1fr}}
+
+#results{display:grid;gap:20px}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:18px;display:grid;gap:14px;min-width:0}
+.card-h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:baseline}
+.card-h h2{margin:0;font-size:17px;font-weight:600;word-break:break-all}
+.badge{font-size:12px;font-family:var(--mono);padding:1px 7px;border-radius:3px;background:var(--chip);color:var(--muted)}
+.badge.sample{font-family:var(--sans);background:var(--amber-soft);color:var(--amber)}
+.meta{font-size:13px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:flex;gap:6px;align-items:baseline;padding:4px 10px;border-radius:999px;font-size:13px;background:var(--chip);color:var(--muted)}
+.chip b{font-variant-numeric:tabular-nums;font-size:15px;color:var(--ink)}
+.chip.auto{background:var(--ok-soft);color:var(--ok)} .chip.auto b{color:var(--ok)}
+.chip.man{background:var(--red-soft);color:var(--red)} .chip.man b{color:var(--red)}
+.chip.ven{background:var(--amber-soft);color:var(--amber)} .chip.ven b{color:var(--amber)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;font-size:14px;padding:7px 14px;border-radius:4px;border:1px solid var(--grid-strong);background:var(--card);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--ink)}
+button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+button.primary{background:var(--ink);color:var(--card);border-color:var(--ink)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.status{font-size:13px;color:var(--muted)}
+.note{font-size:13.5px;padding:10px 12px;border-left:3px solid var(--amber);background:var(--amber-soft);border-radius:0 4px 4px 0;margin:0}
+.note.err{border-color:var(--red);background:var(--red-soft)}
+.clean{margin:0;color:var(--ok);font-weight:500}
+
+details.grp{border-top:1px solid var(--rule);padding-top:10px}
+details.grp>summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;list-style:none}
+details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+details.grp[open]>summary::before{transform:rotate(90deg)}
+.grp-t{font-weight:600}
+.grp-n{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px}
+.tag{font-size:12px;padding:1px 7px;border-radius:3px}
+.tag.auto{background:var(--ok-soft);color:var(--ok)}
+.tag.man{background:var(--red-soft);color:var(--red)}
+.tag.ven{background:var(--amber-soft);color:var(--amber)}
+.tbl{overflow-x:auto;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-weight:500;font-size:12px;color:var(--muted);letter-spacing:.04em;padding:6px 8px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:middle}
+td.loc{white-space:nowrap;color:var(--muted);font-size:13px}
+td.num{font-variant-numeric:tabular-nums;text-align:right}
+.cell{display:inline-grid;grid-template-rows:auto auto;justify-items:center;gap:1px}
+.cell .g{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--grid-strong);font-size:18px;line-height:1;background:var(--paper)}
+.cell .g.pua{font-size:11px;color:var(--red);font-weight:600}
+.cell code,.code{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.ctx{min-width:16em;max-width:30em}
+.ctx mark{background:none;color:var(--red);font-weight:600;padding:0 .18em;border:1.5px solid var(--red);border-radius:50%}
+.fix{white-space:nowrap}
+.fix .to{font-size:16px;font-weight:600;color:var(--ok)}
+
+details.rules{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:14px 18px}
+details.rules>summary{cursor:pointer;font-family:var(--serif);font-weight:700;font-size:17px}
+.rules-body{display:grid;gap:14px;margin-top:12px;font-size:14px}
+.rules-body h3{margin:0 0 4px;font-size:14px}
+.rules-body p,.rules-body ul{margin:0}
+.rules-body ul{padding-left:1.2em;display:grid;gap:3px}
+.rules-body .code{font-size:12px;white-space:normal;overflow-wrap:anywhere}
+footer{font-size:12.5px;color:var(--muted)}
+footer a{color:inherit}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 aria-label="원고 문자 검사"><span class="c" aria-hidden="true">원</span><span class="c" aria-hidden="true">고</span><span class="c sp" aria-hidden="true"></span><span class="c" aria-hidden="true">문</span><span class="c" aria-hidden="true">자</span><span class="c sp" aria-hidden="true"></span><span class="c" aria-hidden="true">검</span><span class="c" aria-hidden="true">사</span></h1>
+    <p class="lede">화면에서는 표준 문자와 똑같이 보이지만 인쇄하면 다른 글꼴로 찍히거나 깨지는 문자를 문자 코드로 찾아냅니다. <b>비표준 가운뎃점, 강희부수 문자, 한글 전용 겹낫표, 반각 낫표</b>는 수정본을 만들어 주고, 판단이 필요한 글자는 위치와 함께 따로 보여 줍니다.</p>
+    <p class="privacy">원고 파일은 이 브라우저 안에서만 읽고 고칩니다. 어디에도 올라가지 않습니다.</p>
+  </header>
+
+  <label class="drop" id="drop" for="file-input">
+    <strong>제출 원고를 여기에 끌어다 놓기</strong>
+    <span>또는 눌러서 고르기 · hwp, hwpx, docx, txt · 여러 개 한꺼번에</span>
+    <input type="file" id="file-input" multiple accept=".hwp,.hwpx,.docx,.txt,.md">
+  </label>
+
+  <ol class="steps">
+    <li><span class="n">1</span><p>최초 제출 원고를 올립니다. hwp는 검사만 되니 한글에서 hwpx로 저장해 올리면 수정본까지 만들 수 있습니다.</p></li>
+    <li><span class="n">2</span><p><b>수정본 저장</b>으로 자동 수정한 파일을 받고, <b>직접 확인</b> 항목은 한글에서 고칩니다.</p></li>
+    <li><span class="n">3</span><p>수정본을 열어 이상 없는지 확인한 뒤 교정을 시작합니다. <b>업체 전달</b> 목록은 1차 교정 때 업체에 넘깁니다.</p></li>
+  </ol>
+
+  <section id="results" aria-live="polite"></section>
+
+  <details class="rules" id="rules">
+    <summary>무엇을 왜 잡아내나</summary>
+    <div class="rules-body">
+      <p>『미술사연구』 50호 최종 PDF를 전수 조사한 결과가 기준입니다. 업체 글꼴에 없는 글자 212종이 함초롬바탕·한컴돋움으로 대신 찍혔고, 한글 전용 겹낫표 114자, 반각 낫표 69자, 강희부수 문자 21자가 고쳐지지 않은 채 인쇄됐습니다.</p>
+      <div><h3>자동 수정</h3><ul>
+        <li>비표준 가운뎃점 <span class="code">‧ U+2027 · ․ U+2024 · ㆍ U+318D · ∙ U+2219 · ⋅ U+22C5 · · U+0387 · ・ U+30FB</span> → · (U+00B7). 옛한글 인용의 아래아는 건드리지 않습니다.</li>
+        <li>강희부수 문자 <span class="code">U+2F00–2FDF</span> → 모양이 같은 한자. PDF·OCR 원문을 복사할 때 섞여 들어옵니다.</li>
+        <li>한글 전용 겹낫표 <span class="code">U+F0854 · U+F0855</span> → 『 』</li>
+        <li>반각 낫표 ｢ ｣ → 「 」</li>
+      </ul></div>
+      <div><h3>직접 확인</h3><ul>
+        <li>일본어 문맥의 ・: 일문 원어 서지면 그대로 둡니다.</li>
+        <li>로마자 단어 안의 점: 발음 부호를 대신 쓴 것인지 봅니다. 예: Asan·ga → Asaṅga</li>
+        <li>조합형 발음 부호, 정체를 알 수 없는 한글 전용 문자, 이미 깨진 문자</li>
+      </ul></div>
+      <div><h3>업체 전달 (저자 수정 아님)</h3><ul>
+        <li>KS X 1001에 없는 한자(일본 신자체, 중국 간체자, 확장 한자, 畫 등): 50호에서 대신 찍힌 한자 131종 중 130종이 여기에 해당했고, 정상 출력된 1,582종 중에는 하나도 없었습니다.</li>
+        <li>로마자 발음 구별 부호(ā ī ṇ 등), 옛한글</li>
+      </ul></div>
+      <div><h3>지적하지 않음</h3><ul>
+        <li>호환 한자(李 U+F9E1 등): 한글 프로그램이 독음별로 넣는 코드로, 출력은 정상입니다.</li>
+        <li>꺾쇠 〈〉와 &lt;&gt;, 원문자, 결락자 □</li>
+      </ul></div>
+    </div>
+  </details>
+
+  <footer>수정본은 원본을 덮어쓰지 않고 새 파일로 저장됩니다. 처음 몇 편은 수정본을 한글에서 열어 확인해 주세요.<br>v1.0 (2026-11-07) · 미술사연구회 출판부 · <a href="https://github.com/pudgala-appraiser/misulsayeongu">소스와 판정 기준</a></footer>
+</div>
+
+<script src="../lib/jszip.min.js"></script>
+<script src="../lib/pako.min.js"></script>
+<script src="../lib/cfb.min.js"></script>
+<script>
+(() => {
+"use strict";
+/* ── 판정 규칙 ─────────────────────────────────────────── */
+const DOTS = new Map([[0x2027,'하이픈 점'],[0x2024,'한 점 리더'],[0x318D,'아래아(한글 자모)'],[0x2219,'불릿 연산자'],
+  [0x22C5,'점 연산자'],[0x0387,'그리스 아노 텔레이아'],[0x30FB,'일본어 가운뎃점'],[0xFF65,'반각 일본어 가운뎃점']]);
+const PUA_KNOWN = new Map([[0xF0854,'『'],[0xF0855,'』']]);
+const HY_PUA = [[0xE0BC,0xEFFF],[0xF100,0xF66E],[0xF784,0xF800],[0xF806,0xF864],[0xF86A,0xF8F7]];
+const isHyPua = o => HY_PUA.some(([a,b]) => o>=a && o<=b);
+const isJamo = o => (o>=0x1100&&o<=0x11FF)||(o>=0xA960&&o<=0xA97F)||(o>=0xD7B0&&o<=0xD7FF);
+const isOldHangul = o => isHyPua(o) || isJamo(o);
+const isKana = o => o>=0x3040 && o<=0x30FF;
+const isAsciiAlpha = o => (o>=65&&o<=90)||(o>=97&&o<=122);
+const isAsciiLower = o => o>=97&&o<=122;
+const isCompat = o => (o>=0xF900&&o<=0xFAFF)||(o>=0x2F800&&o<=0x2FA1F);
+
+const KSX = (() => {               // KS X 1001 한자 4,888자 (EUC-KR 한자 영역을 디코드해 만든다)
+  const set = new Set();
+  try {
+    const dec = new TextDecoder('euc-kr');
+    const buf = new Uint8Array(2);
+    for (let a=0xCA; a<=0xFD; a++) for (let b=0xA1; b<=0xFE; b++) {
+      buf[0]=a; buf[1]=b; const s = dec.decode(buf);
+      const cp = s.codePointAt(0); if (cp && cp !== 0xFFFD) set.add(cp);
+    }
+  } catch (e) {}
+  return set;
+})();
+const inKsx = o => KSX.has(o);
+
+const CAT = {
+  1:'비표준 가운뎃점', 2:'강희부수 문자', 3:'한글 전용 문자', 4:'반각 낫표', 5:'발음 부호', 6:'이미 깨진 문자'
+};
+
+/* 반환: {cat, fix, repl?} (repl 있으면 자동 수정) | {vendor:종류} | null */
+function judge(cps, k){
+  const o = cps[k].c, prev = k>0 ? cps[k-1].c : 0, nxt = k+1<cps.length ? cps[k+1].c : 0;
+  if ((DOTS.has(o) || o===0xB7) && isAsciiAlpha(prev) && isAsciiLower(nxt))
+    return {cat:5, fix:'로마자 단어 안의 점 — 발음 부호 대용인지 확인 (예: Asan·ga → Asaṅga)'};
+  if (DOTS.has(o)) {
+    if (o===0x318D && (isOldHangul(prev) || isOldHangul(nxt))) return null;
+    if ((o===0x30FB||o===0xFF65) && (isKana(prev)||isKana(nxt)||(prev>=0x4E00&&prev<=0x9FFF)))
+      return {cat:1, fix:'· (U+00B7) — 일문 원어 서지면 그대로 둠'};
+    return {cat:1, fix:'· (U+00B7)', repl:'·'};
+  }
+  if ((o>=0x2F00&&o<=0x2FDF)||(o>=0x2E80&&o<=0x2EFF)) {
+    const n = String.fromCodePoint(o).normalize('NFKC');
+    return n !== String.fromCodePoint(o) ? {cat:2, fix:`${n} (${hex(n.codePointAt(0))})`, repl:n} : {cat:2, fix:'모양이 같은 한자로'};
+  }
+  if (isOldHangul(o)) return {vendor:'옛한글'};
+  if ((o>=0xE000&&o<=0xF8FF)||o>=0xF0000) {
+    const r = PUA_KNOWN.get(o);
+    return r ? {cat:3, fix:r, repl:r} : {cat:3, fix:'원문 확인 후 표준 문자로'};
+  }
+  if (o===0xFF62||o===0xFF63) { const r = o===0xFF62 ? '「' : '」'; return {cat:4, fix:r, repl:r}; }
+  if (o===0xFFFD || (o>=0xD800&&o<=0xDFFF)) return {cat:6, fix:'원문 확인'};
+  if (o>=0x0300&&o<=0x036F) return {cat:5, fix:'조합형 부호 → 완성형 문자로 (예: a+̄ → ā)'};
+  if ((o>=0x0100&&o<=0x024F)||(o>=0x1E00&&o<=0x1EFF)) return {vendor:'로마자 발음 구별 부호'};
+  if (((o>=0x3400&&o<=0x9FFF)||(o>=0x20000&&o<=0x3FFFF)) && !inKsx(o)) return {vendor:'KS X 1001 밖 한자'};
+  return null;
+}
+
+const hex = o => 'U+' + o.toString(16).toUpperCase().padStart(4,'0');
+function codepoints(text){
+  const out = [];
+  for (let i=0; i<text.length;) { const c = text.codePointAt(i); const len = c>0xFFFF ? 2 : 1; out.push({c, off:i, len}); i += len; }
+  return out;
+}
+
+/* ── 텍스트 추출 ─────────────────────────────────────────── */
+const ln = el => el.localName;
+function nearestP(el){ let a = el.parentNode; while (a && a.nodeType===1 && ln(a)!=='p') a = a.parentNode; return a && a.nodeType===1 ? a : null; }
+
+function parasFromXml(doc, mode, label, counters){
+  const out = [];
+  const ps = doc.getElementsByTagNameNS('*','p');
+  const noteIds = new Map();
+  for (const p of ps) {
+    let kind = mode==='docx' ? label : '본문';
+    if (mode==='hwpx') {
+      let a = p.parentNode;
+      while (a && a.nodeType===1) {
+        const t = ln(a);
+        if (t==='footNote' || t==='endNote') {
+          if (!noteIds.has(a)) { counters[t]++; noteIds.set(a, a.getAttribute('number') || String(counters[t])); }
+          kind = (t==='footNote' ? '각주 ' : '미주 ') + noteIds.get(a); break;
+        }
+        if (t==='tbl') kind = '표';
+        a = a.parentNode;
+      }
+    }
+    const segs = []; let text = '';
+    for (const t of p.getElementsByTagNameNS('*','t')) {
+      if (nearestP(t) !== p) continue;
+      for (const n of t.childNodes) if (n.nodeType===3 || n.nodeType===4) { segs.push({node:n, start:text.length}); text += n.data; }
+    }
+    if (!text.trim()) continue;
+    let loc;
+    if (mode==='docx') { counters[label] = (counters[label]||0)+1; loc = `${label} ${counters[label]}문단`; }
+    else if (kind==='본문') { counters.body++; loc = `본문 ${counters.body}문단`; }
+    else if (kind==='표') loc = `표 안 (본문 ${counters.body}문단 뒤)`;
+    else loc = kind;
+    out.push({loc, text, segs, p});
+  }
+  return out;
+}
+
+function parseXml(str){
+  const doc = new DOMParser().parseFromString(str, 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('XML을 읽지 못했습니다');
+  return doc;
+}
+const declOf = s => (s.match(/^﻿?<\?xml[^>]*\?>/)||[''])[0].replace(/^﻿/,'');
+
+async function readHwpx(buf){
+  const zip = await JSZip.loadAsync(buf);
+  const names = Object.keys(zip.files).filter(n => /^Contents\/section\d+\.xml$/.test(n))
+    .sort((a,b) => +a.match(/\d+/g).pop() - +b.match(/\d+/g).pop());
+  if (!names.length) throw new Error('hwpx 본문(Contents/section*.xml)을 찾지 못했습니다');
+  const counters = {body:0, footNote:0, endNote:0}, parts = [], paras = [];
+  for (const name of names) {
+    const raw = await zip.file(name).async('string');
+    const doc = parseXml(raw);
+    const ps = parasFromXml(doc, 'hwpx', null, counters);
+    parts.push({name, doc, decl:declOf(raw)});
+    ps.forEach(x => { x.part = parts.length-1; paras.push(x); });
+  }
+  return {paras, zip, parts};
+}
+
+async function readDocx(buf){
+  const zip = await JSZip.loadAsync(buf);
+  const counters = {}, parts = [], paras = [];
+  for (const [name,label] of [['word/document.xml','본문'],['word/footnotes.xml','각주'],['word/endnotes.xml','미주']]) {
+    const f = zip.file(name); if (!f) continue;
+    const raw = await f.async('string');
+    const doc = parseXml(raw);
+    const ps = parasFromXml(doc, 'docx', label, counters);
+    parts.push({name, doc, decl:declOf(raw)});
+    ps.forEach(x => { x.part = parts.length-1; paras.push(x); });
+  }
+  if (!parts.length) throw new Error('docx 본문(word/document.xml)을 찾지 못했습니다');
+  return {paras, zip, parts};
+}
+
+const CHAR_CTRL = new Set([0,10,13,24,25,26,27,28,29,30,31]);   // 1 WCHAR, 나머지 0~31은 8 WCHAR
+function paraText(u8){
+  const n = u8.length >> 1, dv = new DataView(u8.buffer, u8.byteOffset, n*2), keep = [];
+  for (let i=0; i<n;) {
+    const c = dv.getUint16(i*2, true);
+    if (c < 32) { if (c===30||c===31) keep.push(32); i += CHAR_CTRL.has(c) ? 1 : 8; }
+    else { keep.push(c); i++; }
+  }
+  let s = ''; for (let i=0; i<keep.length; i+=8192) s += String.fromCharCode.apply(null, keep.slice(i,i+8192));
+  return s;
+}
+function readHwp(buf){
+  if (typeof CFB === 'undefined') throw new Error('hwp 해석 모듈을 불러오지 못했습니다');
+  const cfb = CFB.read(new Uint8Array(buf), {type:'array'});
+  const fh = CFB.find(cfb, 'FileHeader');
+  if (!fh) throw new Error('hwp 파일 형식이 아닙니다');
+  const fhb = new Uint8Array(fh.content);
+  const flags = new DataView(fhb.buffer, fhb.byteOffset, fhb.length).getUint32(36, true);
+  if (flags & 6) throw new Error('암호가 걸렸거나 배포용인 hwp라 읽을 수 없습니다. 일반 hwp나 hwpx로 다시 저장해 올려 주세요');
+  const secs = [];
+  cfb.FullPaths.forEach((p,i) => { const m = p.match(/BodyText\/Section(\d+)$/); if (m) secs.push([+m[1], cfb.FileIndex[i]]); });
+  secs.sort((a,b) => a[0]-b[0]);
+  const paras = []; let body = 0; const notes = {'fn  ':0, 'en  ':0};
+  for (const [,entry] of secs) {
+    let data = new Uint8Array(entry.content);
+    if (flags & 1) data = pako.inflateRaw(data);
+    const dv = new DataView(data.buffer, data.byteOffset, data.length);
+    let i = 0; const stack = [];
+    while (i + 4 <= data.length) {
+      const h = dv.getUint32(i, true); i += 4;
+      const tag = h & 0x3FF, level = (h >>> 10) & 0x3FF; let size = (h >>> 20) & 0xFFF;
+      if (size === 0xFFF) { size = dv.getUint32(i, true); i += 4; }
+      const rec = data.subarray(i, i+size); i += size;
+      while (stack.length && level <= stack[stack.length-1][0]) stack.pop();
+      if (tag === 71 && rec.length >= 4) {
+        const cid = String.fromCharCode(rec[3], rec[2], rec[1], rec[0]);
+        if (cid in notes) { notes[cid]++; stack.push([level, (cid==='fn  ' ? '각주 ' : '미주 ') + notes[cid]]); }
+        else if (cid === 'tbl ') stack.push([level, '표']);
+        else if (cid === 'head' || cid === 'foot') stack.push([level, '머리말·꼬리말']);
+      } else if (tag === 67) {
+        const text = paraText(rec);
+        if (!text.trim()) continue;
+        let loc;
+        if (stack.length) { loc = stack[stack.length-1][1]; if (loc === '표') loc = `표 안 (본문 ${body}문단 뒤)`; }
+        else { body++; loc = `본문 ${body}문단`; }
+        paras.push({loc, text});
+      }
+    }
+  }
+  return {paras};
+}
+
+function readTxt(text){
+  return {paras: text.split(/\r?\n/).map((l,n) => ({loc:`${n+1}행`, text:l})).filter(x => x.text.trim())};
+}
+
+/* ── 검사 ─────────────────────────────────────────── */
+function scan(paras){
+  const items = [], vendor = new Map(); let compat = 0;
+  paras.forEach((para, pi) => {
+    const cps = codepoints(para.text);
+    cps.forEach((cp, k) => {
+      if (isCompat(cp.c)) { compat++; return; }
+      const r = judge(cps, k); if (!r) return;
+      if (r.vendor) {
+        const key = r.vendor === '옛한글' ? '(옛한글)' : String.fromCodePoint(cp.c);
+        const v = vendor.get(key) || {kind:r.vendor, n:0, loc:para.loc, c:cp.c}; v.n++; vendor.set(key, v);
+      } else {
+        const a = Math.max(0, k-12), b = Math.min(cps.length, k+13);
+        const before = cps.slice(a,k).map(x => String.fromCodePoint(x.c)).join('');
+        const after = cps.slice(k+1,b).map(x => String.fromCodePoint(x.c)).join('');
+        items.push({cat:r.cat, loc:para.loc, c:cp.c, before, after, fix:r.fix, repl:r.repl, pi, off:cp.off, len:cp.len});
+      }
+    });
+  });
+  return {items, vendor, compat};
+}
+
+/* ── 수정본 만들기 ─────────────────────────────────────────── */
+async function buildFixed(res){
+  const fixes = res.items.filter(x => x.repl !== undefined);
+  const touchedParts = new Set(), linesegParas = new Set();
+  const byNode = new Map();
+  for (const f of fixes) {
+    const para = res.data.paras[f.pi];
+    let seg = null;
+    for (const s of para.segs) if (f.off >= s.start && f.off < s.start + s.node.data.length) { seg = s; break; }
+    if (!seg) continue;
+    if (!byNode.has(seg.node)) byNode.set(seg.node, []);
+    byNode.get(seg.node).push({rel:f.off - seg.start, len:f.len, repl:f.repl});
+    touchedParts.add(para.part);
+    if (f.len !== f.repl.length) linesegParas.add(para.p);
+  }
+  for (const [node, list] of byNode) {
+    list.sort((a,b) => b.rel - a.rel);
+    let d = node.data;
+    for (const x of list) d = d.slice(0, x.rel) + x.repl + d.slice(x.rel + x.len);
+    node.data = d;
+  }
+  if (res.kind === 'hwpx')               // 글자 수가 바뀐 문단은 줄 배치 정보를 지워 한글이 다시 계산하게 한다
+    for (const p of linesegParas) for (const c of Array.from(p.children)) if (ln(c) === 'linesegarray') p.removeChild(c);
+  const zip = res.data.zip;
+  for (const pi of touchedParts) {
+    const part = res.data.parts[pi];
+    let xml = new XMLSerializer().serializeToString(part.doc);
+    if (part.decl && !xml.startsWith('<?xml')) xml = part.decl + xml;
+    zip.file(part.name, xml);
+  }
+  const base = res.name.replace(/\.[^.]+$/, '');
+  if (res.kind === 'docx') {
+    const blob = await zip.generateAsync({type:'blob', compression:'DEFLATE'});
+    return {filename:`${base}_문자수정.docx`, data:blob, count:fixes.length};
+  }
+  const mt = zip.file('mimetype');
+  if (mt) zip.file('mimetype', await mt.async('string'), {compression:'STORE'});
+  const blob = await zip.generateAsync({type:'blob', compression:'DEFLATE', mimeType:'application/hwp+zip'});
+  return {filename:`${base}_문자수정.hwpx`, data:blob, count:fixes.length};
+}
+
+/* ── 보고서 ─────────────────────────────────────────── */
+function dispChar(o){
+  if ((o>=0xE000&&o<=0xF8FF)||o>=0xF0000) return {t:'전용', pua:true};
+  if (o>=0x0300&&o<=0x036F) return {t:'◌'+String.fromCodePoint(o)};
+  if (o>=0xD800&&o<=0xDFFF) return {t:'\uFFFD'};
+  return {t:String.fromCodePoint(o)};
+}
+const mdCell = s => String(s).replace(/\|/g,'｜').replace(/\n/g,' ');
+function report(res){
+  const L = [`# 문자 검사 — ${res.name}`, '', `검사: ${new Date().toLocaleString('ko-KR')}`, ''];
+  const cnt = {}; res.items.forEach(x => { const c = cnt[x.cat] || (cnt[x.cat] = {n:0,a:0}); c.n++; if (x.repl !== undefined) c.a++; });
+  L.push('| 범주 | 건수 | 자동 수정 | 직접 확인 |', '|---|---|---|---|');
+  Object.keys(cnt).sort().forEach(k => L.push(`| ${CAT[k]} | ${cnt[k].n} | ${cnt[k].a} | ${cnt[k].n - cnt[k].a} |`));
+  L.push(`| 업체 전달 후보(종) | ${res.vendor.size} | | |`);
+  if (res.compat) L.push(`| (지적 안 함) 호환 한자 | ${res.compat} | | |`);
+  if (res.items.length) {
+    L.push('', '## 지적', '', '| 처리 | 범주 | 위치 | 문자 | 문맥 | 수정안 |', '|---|---|---|---|---|---|');
+    res.items.forEach(x => L.push(`| ${x.repl!==undefined?'자동':'확인'} | ${CAT[x.cat]} | ${mdCell(x.loc)} | ${mdCell(dispChar(x.c).t)} ${hex(x.c)} | ${mdCell(x.before)}【${mdCell(dispChar(x.c).t)}】${mdCell(x.after)} | ${mdCell(x.fix)} |`));
+  }
+  if (res.vendor.size) {
+    L.push('', '## 업체 전달 후보 (저자 수정 아님)', '', '| 문자 | 코드 | 종류 | 건수 | 첫 위치 |', '|---|---|---|---|---|');
+    for (const [k,v] of res.vendor) L.push(`| ${k} | ${k.length>2?'여러 코드':hex(v.c)} | ${v.kind} | ${v.n} | ${mdCell(v.loc)} |`);
+  }
+  if (!res.items.length && !res.vendor.size) L.push('', '문제 문자 없음.');
+  return L.join('\n') + '\n';
+}
+
+/* ── 화면 ─────────────────────────────────────────── */
+const $results = document.getElementById('results');
+const state = {results: []};
+
+function el(tag, attrs={}, ...kids){
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) { if (k==='class') e.className = v; else if (k==='text') e.textContent = v; else e.setAttribute(k, v); }
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+}
+
+function charCell(o){
+  const d = dispChar(o);
+  return el('span', {class:'cell'}, el('span', {class:'g' + (d.pua ? ' pua' : ''), text:d.t}), el('code', {text:hex(o)}));
+}
+
+function renderCard(res){
+  const card = el('article', {class:'card'});
+  const h = el('div', {class:'card-h'}, el('h2', {text:res.name}), el('span', {class:'badge', text:res.kind}));
+  if (res.sample) h.append(el('span', {class:'badge sample', text:'예시 — 실제 원고 아님'}));
+  card.append(h);
+  if (res.error) { card.append(el('p', {class:'note err', text:res.error})); return card; }
+  card.append(el('div', {class:'meta', text:`문단 ${res.data.paras.length.toLocaleString()}개 검사`}));
+
+  const auto = res.items.filter(x => x.repl !== undefined).length, man = res.items.length - auto;
+  const chips = el('div', {class:'chips'});
+  const chip = (cls, label, n) => el('span', {class:'chip ' + cls}, label, el('b', {text:n.toLocaleString()}));
+  chips.append(chip('auto', '자동 수정', auto), chip('man', '직접 확인', man), chip('ven', '업체 전달', res.vendor.size));
+  if (res.compat) chips.append(chip('', '지적 안 함 · 호환 한자', res.compat));
+  card.append(chips);
+
+  const actions = el('div', {class:'actions'}), status = el('span', {class:'status'});
+  const canFix = res.kind === 'hwpx' || res.kind === 'docx';
+  if (canFix && !res.sample) {
+    const b = el('button', {class:'primary', type:'button', text: res.kind === 'hwpx' ? '수정본 저장 (hwpx)' : '수정본 저장 (docx)'});
+    if (!auto) { b.disabled = true; b.title = '자동으로 고칠 글자가 없습니다'; }
+    b.addEventListener('click', async () => {
+      b.disabled = true; status.textContent = '수정본을 만드는 중…';
+      try {
+        res.fixed ||= await buildFixed(res);
+        await saveFile(res.fixed.filename, res.fixed.data, status, `${res.fixed.count}자를 고친 수정본을`);
+      } catch (e) { status.textContent = '수정본을 만들지 못했습니다: ' + (e.message || e); }
+      b.disabled = false;
+    });
+    actions.append(b);
+  }
+  if (!res.sample) {
+    const r = el('button', {type:'button', text:'보고서 저장 (.md)'});
+    r.addEventListener('click', () => saveFile(res.name.replace(/\.[^.]+$/,'') + '_문자검사.md', report(res), status, '보고서를'));
+    actions.append(r);
+  }
+  const c = el('button', {type:'button', text:'보고서 복사'});
+  c.addEventListener('click', async () => {
+    const txt = report(res);
+    try { await navigator.clipboard.writeText(txt); status.textContent = '복사했습니다. 노션이나 교정표에 붙여 넣으세요.'; }
+    catch { const ta = el('textarea', {'aria-label':'보고서'}); ta.value = txt; ta.style.cssText = 'width:100%;height:8em'; actions.after(ta); ta.select(); status.textContent = '자동 복사가 막혀 있어 아래에 띄웠습니다. 선택된 상태에서 복사하세요.'; }
+  });
+  actions.append(c, status);
+  card.append(actions);
+
+  if (res.kind === 'hwp' && !res.sample)
+    card.append(el('p', {class:'note', text:'hwp 파일은 검사만 할 수 있습니다. 한글에서 [다른 이름으로 저장 → 파일 형식: 한글 표준 문서(*.hwpx)]로 저장해 다시 올리면 수정본을 만들 수 있습니다. 바로 고치려면 아래 목록을 보고 한글의 찾아 바꾸기를 쓰세요.'}));
+
+  if (!res.items.length && !res.vendor.size) { card.append(el('p', {class:'clean', text:'문제 문자가 없습니다. 바로 교정을 시작해도 됩니다.'})); return card; }
+
+  const groups = new Map();
+  res.items.forEach(x => { if (!groups.has(x.cat)) groups.set(x.cat, []); groups.get(x.cat).push(x); });
+  [...groups.keys()].sort().forEach((cat, gi) => {
+    const list = groups.get(cat), a = list.filter(x => x.repl !== undefined).length;
+    const d = el('details', {class:'grp'});
+    if (gi === 0 || list.length <= 12) d.open = true;
+    const sum = el('summary', {}, el('span', {class:'grp-t', text:CAT[cat]}), el('span', {class:'grp-n', text:`${list.length}건`}));
+    if (a) sum.append(el('span', {class:'tag auto', text:`자동 ${a}`}));
+    if (list.length - a) sum.append(el('span', {class:'tag man', text:`확인 ${list.length - a}`}));
+    d.append(sum);
+    const tb = el('tbody');
+    list.forEach(x => {
+      const ctx = el('td', {class:'ctx'}, x.before, el('mark', {text:dispChar(x.c).t}), x.after);
+      const fix = el('td', {class:'fix'});
+      if (x.repl !== undefined) fix.append(el('span', {class:'to', text:x.repl}), ' ', el('span', {class:'code', text:hex(x.repl.codePointAt(0))}));
+      else fix.append(x.fix);
+      tb.append(el('tr', {},
+        el('td', {}, el('span', {class:'tag ' + (x.repl !== undefined ? 'auto' : 'man'), text: x.repl !== undefined ? '자동' : '확인'})),
+        el('td', {class:'loc', text:x.loc}), el('td', {}, charCell(x.c)), ctx, fix));
+    });
+    const table = el('table', {}, el('thead', {}, el('tr', {}, ...['처리','위치','문자','문맥','수정안'].map(t => el('th', {text:t})))), tb);
+    d.append(el('div', {class:'tbl'}, table));
+    card.append(d);
+  });
+
+  if (res.vendor.size) {
+    const d = el('details', {class:'grp'});
+    if (res.vendor.size <= 12) d.open = true;
+    d.append(el('summary', {}, el('span', {class:'grp-t', text:'업체 전달 후보'}), el('span', {class:'grp-n', text:`${res.vendor.size}종`}), el('span', {class:'tag ven', text:'저자 수정 아님'})));
+    const tb = el('tbody');
+    for (const [k,v] of res.vendor) tb.append(el('tr', {},
+      el('td', {}, k.length > 2 ? el('span', {text:'옛한글'}) : charCell(v.c)),
+      el('td', {text:v.kind}), el('td', {class:'num', text:v.n.toLocaleString()}), el('td', {class:'loc', text:v.loc})));
+    const table = el('table', {}, el('thead', {}, el('tr', {}, ...['문자','종류','건수','첫 위치'].map(t => el('th', {text:t})))), tb);
+    d.append(el('p', {class:'meta', text:'업체 본문 글꼴에 없어 다른 글꼴로 찍힐 수 있는 글자입니다. 쪽과 위치를 적어 1차 교정 때 출력 확인을 요청하세요.'}), el('div', {class:'tbl'}, table));
+    card.append(d);
+  }
+  return card;
+}
+
+function saveFile(filename, data, status, what){
+  try {
+    const blob = data instanceof Blob ? data : new Blob([data], {type:'text/markdown;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = el('a', {href:url, download:filename}); document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    status.textContent = `${what} 내려받았습니다: ${filename}`;
+  } catch (e) { status.textContent = '내려받지 못했습니다: ' + (e.message || e); }
+}
+
+async function analyze(file){
+  const name = file.name, ext = (name.match(/\.([^.]+)$/) || [,''])[1].toLowerCase();
+  const res = {name, kind:ext};
+  try {
+    const buf = await file.arrayBuffer();
+    if (ext === 'hwpx') res.data = await readHwpx(buf);
+    else if (ext === 'docx') res.data = await readDocx(buf);
+    else if (ext === 'hwp') res.data = readHwp(buf);
+    else if (ext === 'txt' || ext === 'md') res.data = readTxt(new TextDecoder('utf-8').decode(buf));
+    else throw new Error('hwp, hwpx, docx, txt 파일만 검사할 수 있습니다. PDF는 문자 코드가 바뀌어 있을 수 있어 원본을 올려 주세요.');
+    Object.assign(res, scan(res.data.paras));
+  } catch (e) { res.error = '읽지 못했습니다: ' + (e && e.message || e); }
+  return res;
+}
+
+async function handle(files){
+  if (!files.length) return;
+  if (state.results.length && state.results[0].sample) { state.results = []; $results.textContent = ''; }
+  for (const f of files) {
+    const res = await analyze(f);
+    state.results.push(res);
+    $results.prepend(renderCard(res));
+  }
+}
+
+const input = document.getElementById('file-input'), drop = document.getElementById('drop');
+input.addEventListener('change', () => { handle([...input.files]); input.value = ''; });
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => handle([...(e.dataTransfer && e.dataTransfer.files || [])]));
+
+/* 예시: 50호에서 실제로 나온 유형을 섞은 가상의 원고 */
+const SAMPLE = [
+  ['본문 1문단', '도자(토‧도기 포함)와 서화ㆍ공예를 함께 다룬다. 「환성종계책」 원문 “師下出雪松⽉三派⽽雪松之下”를 인용하였다.'],
+  ['본문 2문단', '무착(無著, Asan·ga)의 유식설과 Amitābha 신앙을 함께 살핀다. 李公麟(李公麟)의 화풍은……'],
+  ['각주 1', '\u{F0854}미술사학연구\u{F0855} 286; 瑞山文化院, ｢佛宇｣條; 『槿域書畫徵』; 弥勒 研究 学会'],
+];
+function showSample(){
+  const data = {paras: SAMPLE.map(([loc,text]) => ({loc, text}))};
+  const res = Object.assign({name:'예시 원고.hwpx', kind:'hwpx', sample:true, data}, scan(data.paras));
+  state.results = [res];
+  $results.append(renderCard(res));
+}
+showSample();
+
+window.charcheckDebug = {analyze, buildFixed, report, state, ksxSize: KSX.size};
+})();
+</script>
+</body>
+</html>
