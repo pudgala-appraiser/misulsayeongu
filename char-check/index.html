@@ -130,7 +130,7 @@ footer a{color:inherit}
 <div class="wrap">
   <header>
     <h1 aria-label="원고 문자 검사"><span class="c" aria-hidden="true">원</span><span class="c" aria-hidden="true">고</span><span class="c sp" aria-hidden="true"></span><span class="c" aria-hidden="true">문</span><span class="c" aria-hidden="true">자</span><span class="c sp" aria-hidden="true"></span><span class="c" aria-hidden="true">검</span><span class="c" aria-hidden="true">사</span></h1>
-    <p class="lede">화면에서는 표준 문자와 똑같이 보이지만 인쇄하면 다른 글꼴로 찍히거나 깨지는 문자를 문자 코드로 찾아냅니다. <b>비표준 가운뎃점, 강희부수 문자, 한글 전용 겹낫표, 반각 낫표</b>는 수정본을 만들어 주고, 판단이 필요한 글자는 위치와 함께 따로 보여 줍니다.</p>
+    <p class="lede">화면에서는 표준 문자와 똑같이 보이지만 인쇄하면 다른 글꼴로 찍히거나 깨지는 문자를 문자 코드로 찾아냅니다. <b>비표준 가운뎃점, 강희부수 문자, 한글 전용 겹낫표, 비표준 낫표, 섞여 쓴 꺾쇠</b>는 수정본을 만들어 주고, 판단이 필요한 글자는 위치와 함께 따로 보여 줍니다.</p>
     <p class="privacy">원고 파일은 이 브라우저 안에서만 읽고 고칩니다. 어디에도 올라가지 않습니다.</p>
   </header>
 
@@ -151,16 +151,20 @@ footer a{color:inherit}
   <details class="rules" id="rules">
     <summary>무엇을 왜 잡아내나</summary>
     <div class="rules-body">
-      <p>『미술사연구』 50호 최종 PDF를 전수 조사한 결과가 기준입니다. 업체 글꼴에 없는 글자 212종이 함초롬바탕·한컴돋움으로 대신 찍혔고, 한글 전용 겹낫표 114자, 반각 낫표 69자, 강희부수 문자 21자가 고쳐지지 않은 채 인쇄됐습니다.</p>
+      <p>『미술사연구』 50호 최종 PDF를 전수 조사한 결과가 기준입니다. 업체 글꼴에 없는 글자 212종이 함초롬바탕·한컴돋움으로 대신 찍혔고, 한글 전용 겹낫표 114자, 반각 낫표 69자, 강희부수 문자 21자가 고쳐지지 않은 채 인쇄됐습니다. 꺾쇠도 &lt;&gt;와 〈〉가 섞인 채 실렸고(업체 글꼴에서는 같은 모양), 수학 기호 ≪≫는 부등호 모양으로 찍혔습니다.</p>
       <div><h3>자동 수정</h3><ul>
         <li>비표준 가운뎃점 <span class="code">‧ U+2027 · ․ U+2024 · ㆍ U+318D · ∙ U+2219 · ⋅ U+22C5 · · U+0387 · ・ U+30FB</span> → · (U+00B7). 옛한글 인용의 아래아는 건드리지 않습니다.</li>
         <li>강희부수 문자 <span class="code">U+2F00–2FDF</span> → 모양이 같은 한자. PDF·OCR 원문을 복사할 때 섞여 들어옵니다.</li>
         <li>한글 전용 겹낫표 <span class="code">U+F0854 · U+F0855</span> → 『 』</li>
-        <li>반각 낫표 ｢ ｣ → 「 」</li>
+        <li>반각 낫표 ｢ ｣, 세로쓰기용 낫표 ﹁ ﹂ ﹃ ﹄ → 「 」 『 』</li>
+        <li>꺾쇠: 짝이 맞는 &lt; &gt;, ＜ ＞, 〈 〉(U+2329), ⟨ ⟩, ︿ ﹀ → 〈 〉(U+3008·3009). 표 번호도 〈표 1〉로 통일합니다.</li>
+        <li>겹꺾쇠: 짝이 맞는 ≪ ≫, &lt;&lt; &gt;&gt;, ⟪ ⟫, ︽ ︾ → 《 》(U+300A·300B)</li>
+        <li>꺾쇠는 같은 문단 안에서 짝이 맞을 때만 고칩니다. p&lt;0.05 같은 수식, &lt;http://…&gt; 같은 주소, 짝 없는 &lt; &gt;는 건드리지 않습니다.</li>
       </ul></div>
       <div><h3>직접 확인</h3><ul>
         <li>일본어 문맥의 ・: 일문 원어 서지면 그대로 둡니다.</li>
         <li>로마자 단어 안의 점: 발음 부호를 대신 쓴 것인지 봅니다. 예: Asan·ga → Asaṅga</li>
+        <li>« »: 서양어 원문 인용이 아니면 《 》로 고칩니다. 짝이 없는 ＜ ≪ 등도 여기에 나옵니다.</li>
         <li>조합형 발음 부호, 정체를 알 수 없는 한글 전용 문자, 이미 깨진 문자</li>
       </ul></div>
       <div><h3>업체 전달 (저자 수정 아님)</h3><ul>
@@ -169,12 +173,13 @@ footer a{color:inherit}
       </ul></div>
       <div><h3>지적하지 않음</h3><ul>
         <li>호환 한자(李 U+F9E1 등): 한글 프로그램이 독음별로 넣는 코드로, 출력은 정상입니다.</li>
-        <li>꺾쇠 〈〉와 &lt;&gt;, 원문자, 결락자 □</li>
+        <li>원문자, 결락자 □, 짝 없는 &lt; &gt;(수식·화살표)</li>
+        <li>낫표·꺾쇠를 쓰는 자리가 맞는지(논문에 『』를 쓴 경우 등)는 문자 검사가 아니라 교정에서 봅니다.</li>
       </ul></div>
     </div>
   </details>
 
-  <footer>수정본은 원본을 덮어쓰지 않고 새 파일로 저장됩니다. 처음 몇 편은 수정본을 한글에서 열어 확인해 주세요.<br>v1.0 (2026-11-07) · 미술사연구회 출판부 · <a href="https://github.com/pudgala-appraiser/misulsayeongu">소스와 판정 기준</a></footer>
+  <footer>수정본은 원본을 덮어쓰지 않고 새 파일로 저장됩니다. 처음 몇 편은 수정본을 한글에서 열어 확인해 주세요.<br>v1.1 (2026-11-07) · 미술사연구회 출판부 · <a href="https://github.com/pudgala-appraiser/misulsayeongu">소스와 판정 기준</a></footer>
 </div>
 
 <script src="../lib/jszip.min.js"></script>
@@ -211,8 +216,67 @@ const KSX = (() => {               // KS X 1001 한자 4,888자 (EUC-KR 한자 �
 const inKsx = o => KSX.has(o);
 
 const CAT = {
-  1:'비표준 가운뎃점', 2:'강희부수 문자', 3:'한글 전용 문자', 4:'반각 낫표', 5:'발음 부호', 6:'이미 깨진 문자'
+  1:'비표준 가운뎃점', 2:'강희부수 문자', 3:'한글 전용 문자', 4:'비표준 낫표', 5:'발음 부호', 6:'이미 깨진 문자', 7:'꺾쇠'
 };
+const NAK = new Map([[0xFF62,'「'],[0xFF63,'」'],[0xFE41,'「'],[0xFE42,'」'],[0xFE43,'『'],[0xFE44,'』']]);   // 반각·세로쓰기용 낫표
+
+/* 꺾쇠(1)·겹꺾쇠(2): 같은 문단 안에서 짝이 맞으면 표준 문자로 (원고작성원칙 10-4항, 표 번호도 〈표 1〉) */
+const BR_OPEN = new Map([[0x3C,1],[0xFF1C,1],[0x2329,1],[0x27E8,1],[0xFE3F,1],[0x3008,1],[0x226A,2],[0x27EA,2],[0xFE3D,2],[0x300A,2]]);
+const BR_CLOSE = new Map([[0x3E,1],[0xFF1E,1],[0x232A,1],[0x27E9,1],[0xFE40,1],[0x3009,1],[0x226B,2],[0x27EB,2],[0xFE3E,2],[0x300B,2]]);
+const BR_STD = {'1o':'〈', '1c':'〉', '2o':'《', '2c':'》'};
+const BR_ASCII = new Set(['<','>','<<','>>']);   // 짝이 없으면 수식·화살표로 보고 지적하지 않는다
+const BR_MAX = 80;                              // 짝 사이 최대 글자 수
+const BR_ORPHAN = '짝이 없음 — 꺾쇠면 〈 〉, 겹꺾쇠면 《 》로';
+const isAsciiAlnum = o => isAsciiAlpha(o) || (o>=48&&o<=57);
+const hasHangulHan = s => [...s].some(ch => { const o = ch.codePointAt(0); return (o>=0xAC00&&o<=0xD7A3)||(o>=0x3400&&o<=0x9FFF); });
+
+function bracketTokens(cps){
+  const out = [];
+  for (let k=0; k<cps.length; k++) {
+    const o = cps[k].c, o2 = k+1<cps.length ? cps[k+1].c : 0;
+    if ((o===0x3C||o===0x3E) && o2===o) { out.push({k, kind: o===0x3C ? 'o' : 'c', cls:2, s: o===0x3C ? '<<' : '>>', n:2}); k++; continue; }
+    if (BR_OPEN.has(o)) out.push({k, kind:'o', cls:BR_OPEN.get(o), s:String.fromCodePoint(o), n:1});
+    else if (BR_CLOSE.has(o)) out.push({k, kind:'c', cls:BR_CLOSE.get(o), s:String.fromCodePoint(o), n:1});
+  }
+  return out;
+}
+/* 반환: Map(위치 → {fix, repl?, n}) — repl이 없으면 직접 확인 */
+function bracketMarks(cps){
+  const marks = new Map(), toks = bracketTokens(cps), paired = new Set();
+  const str = (a, b) => cps.slice(a, b).map(x => String.fromCodePoint(x.c)).join('');
+  cps.forEach((cp, k) => { if (cp.c===0xAB || cp.c===0xBB) marks.set(k, {fix:'서양어 원문 인용이 아니면 《 》로', n:1}); });
+  toks.forEach((t, a) => {
+    if (t.kind === 'c') {
+      if (!paired.has(a) && !BR_ASCII.has(t.s) && t.s !== BR_STD[t.cls+'c']) marks.set(t.k, {fix:BR_ORPHAN, n:t.n});
+      return;
+    }
+    let b = -1;
+    for (let c=a+1; c<toks.length; c++) {
+      const q = toks[c];
+      if (q.k - t.k > BR_MAX + 2 || (q.kind==='o' && q.cls===t.cls)) break;
+      if (q.kind==='c' && q.cls===t.cls) { b = c; break; }
+    }
+    let ok = false, ct = null;
+    if (b >= 0) {
+      ct = toks[b];
+      const inner = str(t.k + t.n, ct.k);
+      const prev = t.k > 0 ? cps[t.k-1].c : 0, nxt = ct.k + ct.n < cps.length ? cps[ct.k + ct.n].c : 0;
+      ok = inner.length > 0 && /\p{L}/u.test(inner) && !inner.includes('=')
+        && !['://','@','www.'].some(x => inner.includes(x))
+        && !isAsciiAlnum(prev)                       // p<0.05
+        && !isAsciiAlpha(nxt)                        // a>b (뒤의 숫자는 각주 번호일 수 있어 허용)
+        && ((!/^\s/u.test(inner) && !/\s$/u.test(inner)) || hasHangulHan(inner));
+    }
+    if (ok) {
+      paired.add(b);
+      for (const [tk, kind] of [[t,'o'],[ct,'c']]) {
+        const std = BR_STD[t.cls + kind];
+        if (tk.s !== std) marks.set(tk.k, {fix:`${std} (${hex(std.codePointAt(0))})`, repl:std, n:tk.n});
+      }
+    } else if (!BR_ASCII.has(t.s) && t.s !== BR_STD[t.cls+'o']) marks.set(t.k, {fix:BR_ORPHAN, n:t.n});
+  });
+  return marks;
+}
 
 /* 반환: {cat, fix, repl?} (repl 있으면 자동 수정) | {vendor:종류} | null */
 function judge(cps, k){
@@ -234,7 +298,7 @@ function judge(cps, k){
     const r = PUA_KNOWN.get(o);
     return r ? {cat:3, fix:r, repl:r} : {cat:3, fix:'원문 확인 후 표준 문자로'};
   }
-  if (o===0xFF62||o===0xFF63) { const r = o===0xFF62 ? '「' : '」'; return {cat:4, fix:r, repl:r}; }
+  if (NAK.has(o)) { const r = NAK.get(o); return {cat:4, fix:r, repl:r}; }
   if (o===0xFFFD || (o>=0xD800&&o<=0xDFFF)) return {cat:6, fix:'원문 확인'};
   if (o>=0x0300&&o<=0x036F) return {cat:5, fix:'조합형 부호 → 완성형 문자로 (예: a+̄ → ā)'};
   if ((o>=0x0100&&o<=0x024F)||(o>=0x1E00&&o<=0x1EFF)) return {vendor:'로마자 발음 구별 부호'};
@@ -385,20 +449,25 @@ function readTxt(text){
 function scan(paras){
   const items = [], vendor = new Map(); let compat = 0;
   paras.forEach((para, pi) => {
-    const cps = codepoints(para.text);
-    cps.forEach((cp, k) => {
-      if (isCompat(cp.c)) { compat++; return; }
-      const r = judge(cps, k); if (!r) return;
+    const cps = codepoints(para.text), marks = bracketMarks(cps);
+    const str = (a, b) => cps.slice(a, b).map(x => String.fromCodePoint(x.c)).join('');
+    for (let k=0; k<cps.length; k++) {
+      const cp = cps[k], m = marks.get(k);
+      if (m) {
+        const last = cps[k + m.n - 1];
+        items.push({cat:7, loc:para.loc, c:cp.c, s:str(k, k + m.n), before:str(Math.max(0,k-12), k), after:str(k + m.n, Math.min(cps.length, k + m.n + 12)),
+          fix:m.fix, repl:m.repl, pi, off:cp.off, len:last.off + last.len - cp.off});
+        k += m.n - 1; continue;
+      }
+      if (isCompat(cp.c)) { compat++; continue; }
+      const r = judge(cps, k); if (!r) continue;
       if (r.vendor) {
         const key = r.vendor === '옛한글' ? '(옛한글)' : String.fromCodePoint(cp.c);
         const v = vendor.get(key) || {kind:r.vendor, n:0, loc:para.loc, c:cp.c}; v.n++; vendor.set(key, v);
       } else {
-        const a = Math.max(0, k-12), b = Math.min(cps.length, k+13);
-        const before = cps.slice(a,k).map(x => String.fromCodePoint(x.c)).join('');
-        const after = cps.slice(k+1,b).map(x => String.fromCodePoint(x.c)).join('');
-        items.push({cat:r.cat, loc:para.loc, c:cp.c, before, after, fix:r.fix, repl:r.repl, pi, off:cp.off, len:cp.len});
+        items.push({cat:r.cat, loc:para.loc, c:cp.c, before:str(Math.max(0,k-12), k), after:str(k+1, Math.min(cps.length, k+13)), fix:r.fix, repl:r.repl, pi, off:cp.off, len:cp.len});
       }
-    });
+    }
   });
   return {items, vendor, compat};
 }
@@ -410,11 +479,16 @@ async function buildFixed(res){
   const byNode = new Map();
   for (const f of fixes) {
     const para = res.data.paras[f.pi];
-    let seg = null;
-    for (const s of para.segs) if (f.off >= s.start && f.off < s.start + s.node.data.length) { seg = s; break; }
-    if (!seg) continue;
-    if (!byNode.has(seg.node)) byNode.set(seg.node, []);
-    byNode.get(seg.node).push({rel:f.off - seg.start, len:f.len, repl:f.repl});
+    let off = f.off, rest = f.len, first = true;       // 두 글자(<<)가 서식 경계로 나뉘어 있어도 고친다
+    while (rest > 0) {
+      const seg = para.segs.find(s => off >= s.start && off < s.start + s.node.data.length);
+      if (!seg) break;
+      const take = Math.min(rest, seg.start + seg.node.data.length - off);
+      if (!byNode.has(seg.node)) byNode.set(seg.node, []);
+      byNode.get(seg.node).push({rel:off - seg.start, len:take, repl: first ? f.repl : ''});
+      first = false; off += take; rest -= take;
+    }
+    if (first) continue;
     touchedParts.add(para.part);
     if (f.len !== f.repl.length) linesegParas.add(para.p);
   }
@@ -452,6 +526,14 @@ function dispChar(o){
   return {t:String.fromCodePoint(o)};
 }
 const mdCell = s => String(s).replace(/\|/g,'｜').replace(/\n/g,' ');
+const shown = x => x.s !== undefined ? x.s : dispChar(x.c).t;
+const codesOf = x => x.s !== undefined ? [...x.s].map(ch => hex(ch.codePointAt(0))).join(' ') : hex(x.c);
+const isBulk = x => x.cat === 7 && x.repl !== undefined;     // 짝이 맞는 꺾쇠는 종류별로 묶어 보인다
+function bulkRows(items){
+  const m = new Map();
+  items.filter(isBulk).forEach(x => { const key = x.s + '→' + x.repl; const b = m.get(key) || {x, n:0}; b.n++; m.set(key, b); });
+  return [...m.values()];
+}
 function report(res){
   const L = [`# 문자 검사 — ${res.name}`, '', `검사: ${new Date().toLocaleString('ko-KR')}`, ''];
   const cnt = {}; res.items.forEach(x => { const c = cnt[x.cat] || (cnt[x.cat] = {n:0,a:0}); c.n++; if (x.repl !== undefined) c.a++; });
@@ -459,9 +541,14 @@ function report(res){
   Object.keys(cnt).sort().forEach(k => L.push(`| ${CAT[k]} | ${cnt[k].n} | ${cnt[k].a} | ${cnt[k].n - cnt[k].a} |`));
   L.push(`| 업체 전달 후보(종) | ${res.vendor.size} | | |`);
   if (res.compat) L.push(`| (지적 안 함) 호환 한자 | ${res.compat} | | |`);
-  if (res.items.length) {
+  const listed = res.items.filter(x => !isBulk(x)), bulk = bulkRows(res.items);
+  if (listed.length) {
     L.push('', '## 지적', '', '| 처리 | 범주 | 위치 | 문자 | 문맥 | 수정안 |', '|---|---|---|---|---|---|');
-    res.items.forEach(x => L.push(`| ${x.repl!==undefined?'자동':'확인'} | ${CAT[x.cat]} | ${mdCell(x.loc)} | ${mdCell(dispChar(x.c).t)} ${hex(x.c)} | ${mdCell(x.before)}【${mdCell(dispChar(x.c).t)}】${mdCell(x.after)} | ${mdCell(x.fix)} |`));
+    listed.forEach(x => L.push(`| ${x.repl!==undefined?'자동':'확인'} | ${CAT[x.cat]} | ${mdCell(x.loc)} | ${mdCell(shown(x))} ${codesOf(x)} | ${mdCell(x.before)}【${mdCell(shown(x))}】${mdCell(x.after)} | ${mdCell(x.fix)} |`));
+  }
+  if (bulk.length) {
+    L.push('', '## 꺾쇠 통일 (짝이 맞는 것 — 자동 수정)', '', '| 현행 | 코드 | 수정 | 건수 | 첫 위치 | 첫 문맥 |', '|---|---|---|---|---|---|');
+    bulk.forEach(({x, n}) => L.push(`| ${mdCell(x.s)} | ${codesOf(x)} | ${mdCell(x.fix)} | ${n} | ${mdCell(x.loc)} | ${mdCell(x.before)}【${mdCell(x.s)}】${mdCell(x.after)} |`));
   }
   if (res.vendor.size) {
     L.push('', '## 업체 전달 후보 (저자 수정 아님)', '', '| 문자 | 코드 | 종류 | 건수 | 첫 위치 |', '|---|---|---|---|---|');
@@ -482,7 +569,9 @@ function el(tag, attrs={}, ...kids){
   return e;
 }
 
-function charCell(o){
+function charCell(o, s){
+  if (s !== undefined && [...s].length > 1)
+    return el('span', {class:'cell'}, el('span', {class:'g', text:s}), el('code', {text:[...s].map(ch => hex(ch.codePointAt(0))).join(' ')}));
   const d = dispChar(o);
   return el('span', {class:'cell'}, el('span', {class:'g' + (d.pua ? ' pua' : ''), text:d.t}), el('code', {text:hex(o)}));
 }
@@ -540,21 +629,22 @@ function renderCard(res){
   res.items.forEach(x => { if (!groups.has(x.cat)) groups.set(x.cat, []); groups.get(x.cat).push(x); });
   [...groups.keys()].sort().forEach((cat, gi) => {
     const list = groups.get(cat), a = list.filter(x => x.repl !== undefined).length;
+    const rows = cat == 7 ? [...list.filter(x => !isBulk(x)).map(x => ({x, n:1})), ...bulkRows(list)] : list.map(x => ({x, n:1}));
     const d = el('details', {class:'grp'});
-    if (gi === 0 || list.length <= 12) d.open = true;
+    if (gi === 0 || rows.length <= 12) d.open = true;
     const sum = el('summary', {}, el('span', {class:'grp-t', text:CAT[cat]}), el('span', {class:'grp-n', text:`${list.length}건`}));
     if (a) sum.append(el('span', {class:'tag auto', text:`자동 ${a}`}));
     if (list.length - a) sum.append(el('span', {class:'tag man', text:`확인 ${list.length - a}`}));
     d.append(sum);
     const tb = el('tbody');
-    list.forEach(x => {
-      const ctx = el('td', {class:'ctx'}, x.before, el('mark', {text:dispChar(x.c).t}), x.after);
+    rows.forEach(({x, n}) => {
+      const ctx = el('td', {class:'ctx'}, x.before, el('mark', {text:shown(x)}), x.after);
       const fix = el('td', {class:'fix'});
       if (x.repl !== undefined) fix.append(el('span', {class:'to', text:x.repl}), ' ', el('span', {class:'code', text:hex(x.repl.codePointAt(0))}));
       else fix.append(x.fix);
       tb.append(el('tr', {},
         el('td', {}, el('span', {class:'tag ' + (x.repl !== undefined ? 'auto' : 'man'), text: x.repl !== undefined ? '자동' : '확인'})),
-        el('td', {class:'loc', text:x.loc}), el('td', {}, charCell(x.c)), ctx, fix));
+        el('td', {class:'loc', text: n > 1 ? `${n.toLocaleString()}건 · 처음 ${x.loc}` : x.loc}), el('td', {}, charCell(x.c, x.s)), ctx, fix));
     });
     const table = el('table', {}, el('thead', {}, el('tr', {}, ...['처리','위치','문자','문맥','수정안'].map(t => el('th', {text:t})))), tb);
     d.append(el('div', {class:'tbl'}, table));
@@ -620,7 +710,7 @@ drop.addEventListener('drop', e => handle([...(e.dataTransfer && e.dataTransfer.
 /* 예시: 50호에서 실제로 나온 유형을 섞은 가상의 원고 */
 const SAMPLE = [
   ['본문 1문단', '도자(토‧도기 포함)와 서화ㆍ공예를 함께 다룬다. 「환성종계책」 원문 “師下出雪松⽉三派⽽雪松之下”를 인용하였다.'],
-  ['본문 2문단', '무착(無著, Asan·ga)의 유식설과 Amitābha 신앙을 함께 살핀다. 李公麟(李公麟)의 화풍은……'],
+  ['본문 2문단', '무착(無著, Asan·ga)의 유식설과 Amitābha 신앙을 함께 살핀다. 李公麟(李公麟)의 화풍은 <오백나한도>와 ≪근역화휘≫에서 보인다(<표 1>).'],
   ['각주 1', '\u{F0854}미술사학연구\u{F0855} 286; 瑞山文化院, ｢佛宇｣條; 『槿域書畫徵』; 弥勒 研究 学会'],
 ];
 function showSample(){
