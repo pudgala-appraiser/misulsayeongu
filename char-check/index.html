@@ -77,6 +77,15 @@ h1 .c.sp{background:transparent;border-color:var(--grid)}
 .chip.auto{background:var(--ok-soft);color:var(--ok)} .chip.auto b{color:var(--ok)}
 .chip.man{background:var(--red-soft);color:var(--red)} .chip.man b{color:var(--red)}
 .chip.ven{background:var(--amber-soft);color:var(--amber)} .chip.ven b{color:var(--amber)}
+/* 요약 칩 = 해당 묶음으로 이동하는 버튼 */
+button.chip{font:inherit;font-size:13px;border:1px solid transparent;border-radius:999px;padding:4px 10px;cursor:pointer}
+button.chip:hover{border-color:currentColor;text-decoration:underline;text-underline-offset:3px}
+button.chip:disabled{cursor:default;text-decoration:none;border-color:transparent;opacity:.6}
+/* 처리 방식별 구획: 직접 확인 → 업체 전달 → 자동 수정 */
+.sec-h{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin:6px 0 0;padding-top:14px;border-top:2px solid var(--grid-strong)}
+.sec-h h3{margin:0;font-family:var(--serif);font-size:18px;font-weight:700}
+.sec-h p{margin:0;font-size:13px;color:var(--muted)}
+.sec-h.man h3{color:var(--red)} .sec-h.ven h3{color:var(--amber)} .sec-h.auto h3{color:var(--ok)}
 .actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 button{font:inherit;font-size:14px;padding:7px 14px;border-radius:4px;border:1px solid var(--grid-strong);background:var(--card);color:var(--ink);cursor:pointer}
 button:hover{border-color:var(--ink)}
@@ -593,9 +602,19 @@ function renderCard(res){
 
   const auto = res.items.filter(x => x.repl !== undefined).length, man = res.items.length - auto;
   const chips = el('div', {class:'chips'});
-  const chip = (cls, label, n) => el('span', {class:'chip ' + cls}, label, el('b', {text:n.toLocaleString()}));
-  chips.append(chip('auto', '자동 수정', auto), chip('man', '직접 확인', man), chip('ven', '업체 전달', res.vendor.size));
-  if (res.compat) chips.append(chip('', '지적 안 함 · 호환 한자', res.compat));
+  const secs = {};   // 처리 방식별 구획 — 칩을 누르면 그 구획으로 이동해 펼친다
+  const chip = (cls, label, n) => {
+    const b = el('button', {type:'button', class:'chip ' + cls}, label, el('b', {text:n.toLocaleString()}));
+    if (!n) b.disabled = true;
+    b.addEventListener('click', () => {
+      const sec = secs[cls]; if (!sec) return;
+      sec.groups.forEach(d => d.open = true);
+      sec.head.scrollIntoView({block:'start'});
+    });
+    return b;
+  };
+  chips.append(chip('man', '직접 확인', man), chip('ven', '업체 전달', res.vendor.size), chip('auto', '자동 수정', auto));
+  if (res.compat) chips.append(el('span', {class:'chip'}, '지적 안 함 · 호환 한자', el('b', {text:res.compat.toLocaleString()})));
   card.append(chips);
 
   const actions = el('div', {class:'actions'}), status = el('span', {class:'status'});
@@ -632,13 +651,19 @@ function renderCard(res){
 
   if (!res.items.length && !res.vendor.size) { card.append(el('p', {class:'clean', text:'문제 문자가 없습니다. 바로 교정을 시작해도 됩니다.'})); return card; }
 
+  // 할 일 순서로 구획: 직접 확인(펼침) → 업체 전달 → 자동 수정(접힘, 수정본에 반영되므로)
+  const section = (cls, title, desc) => {
+    const head = el('div', {class:'sec-h ' + cls}, el('h3', {text:title}), el('p', {text:desc}));
+    card.append(head); secs[cls] = {head, groups:[]}; return secs[cls];
+  };
+  const renderGroups = (items, sec, openAll) => {
   const groups = new Map();
-  res.items.forEach(x => { if (!groups.has(x.cat)) groups.set(x.cat, []); groups.get(x.cat).push(x); });
+  items.forEach(x => { if (!groups.has(x.cat)) groups.set(x.cat, []); groups.get(x.cat).push(x); });
   [...groups.keys()].sort().forEach((cat, gi) => {
     const list = groups.get(cat), a = list.filter(x => x.repl !== undefined).length;
     const rows = cat == 7 ? [...list.filter(x => !isBulk(x)).map(x => ({x, n:1})), ...bulkRows(list)] : list.map(x => ({x, n:1}));
     const d = el('details', {class:'grp'});
-    if (gi === 0 || rows.length <= 12) d.open = true;
+    if (openAll && (gi === 0 || rows.length <= 12)) d.open = true;
     const sum = el('summary', {}, el('span', {class:'grp-t', text:CAT[cat]}), el('span', {class:'grp-n', text:`${list.length}건`}));
     if (a) sum.append(el('span', {class:'tag auto', text:`자동 ${a}`}));
     if (list.length - a) sum.append(el('span', {class:'tag man', text:`확인 ${list.length - a}`}));
@@ -655,11 +680,15 @@ function renderCard(res){
     });
     const table = el('table', {}, el('thead', {}, el('tr', {}, ...['처리','위치','문자','문맥','수정안'].map(t => el('th', {text:t})))), tb);
     d.append(el('div', {class:'tbl'}, table));
-    card.append(d);
+    card.append(d); sec.groups.push(d);
   });
+  };
+  const manItems = res.items.filter(x => x.repl === undefined), autoItems = res.items.filter(x => x.repl !== undefined);
+  if (manItems.length) renderGroups(manItems, section('man', `직접 확인 ${manItems.length.toLocaleString()}건`, '한글에서 위치를 찾아 직접 고칩니다.'), true);
 
   if (res.vendor.size) {
-    const d = el('details', {class:'grp'});
+    const vsec = section('ven', `업체 전달 ${res.vendor.size.toLocaleString()}종`, '저자 수정이 아닙니다. 1차 교정 때 업체에 넘깁니다.');
+    const d = el('details', {class:'grp'}); vsec.groups.push(d);
     if (res.vendor.size <= 12) d.open = true;
     d.append(el('summary', {}, el('span', {class:'grp-t', text:'업체 전달 후보'}), el('span', {class:'grp-n', text:`${res.vendor.size}종`}), el('span', {class:'tag ven', text:'저자 수정 아님'})));
     const tb = el('tbody');
@@ -670,6 +699,10 @@ function renderCard(res){
     d.append(el('p', {class:'meta', text:'업체 본문 글꼴에 없어 다른 글꼴로 찍힐 수 있는 글자입니다. 쪽과 위치를 적어 1차 교정 때 출력 확인을 요청하세요.'}), el('div', {class:'tbl'}, table));
     card.append(d);
   }
+  if (autoItems.length) renderGroups(autoItems, section('auto', `자동 수정 ${autoItems.length.toLocaleString()}건`,
+    res.kind === 'hwp' ? '수정본을 만들 수 없는 hwp입니다. 한글의 찾아 바꾸기로 고치거나 hwpx로 저장해 다시 올리세요.'
+    : canFix ? '수정본 저장에 모두 반영됩니다. 펼쳐서 확인할 수 있습니다.'
+    : '이 형식은 수정본을 만들지 않습니다. 펼쳐서 수정안대로 고치세요.'), false);
   return card;
 }
 
