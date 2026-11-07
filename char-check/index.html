@@ -116,12 +116,27 @@ td.loc{white-space:nowrap;color:var(--muted);font-size:13px}
 td.num{font-variant-numeric:tabular-nums;text-align:right}
 .cell{display:inline-grid;grid-template-rows:auto auto;justify-items:center;gap:1px}
 .cell .g{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--grid-strong);font-size:18px;line-height:1;background:var(--paper)}
-.cell .g.pua{font-size:11px;color:var(--red);font-weight:600}
-.cell code,.code{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+.cell .g.pua{font-size:12px;color:var(--red);font-weight:600}
+.cell code,.code{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
 .ctx{min-width:16em;max-width:30em}
 .ctx mark{background:none;color:var(--red);font-weight:600;padding:0 .18em;border:1.5px solid var(--red);border-radius:50%}
 .fix{white-space:nowrap}
 .fix .to{font-size:16px;font-weight:600;color:var(--ok)}
+.tag{white-space:nowrap}
+/* 휴대폰: 항목 표를 한 건씩 카드로 — 문자와 수정안을 나란히, 문맥은 아래 한 줄 */
+@media (max-width:640px){
+  table.items,table.items tbody{display:block}
+  table.items thead{display:none}
+  table.items tr{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"tag loc" "ch fix" "ctx ctx";
+    gap:6px 12px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--rule)}
+  table.items td{border:0;padding:0}
+  table.items td:nth-child(1){grid-area:tag}
+  table.items td:nth-child(2){grid-area:loc}
+  table.items td:nth-child(3){grid-area:ch}
+  table.items td:nth-child(4){grid-area:ctx;min-width:0;max-width:none}
+  table.items td:nth-child(5){grid-area:fix;white-space:normal}
+  table.items td.fix::before{content:"→ ";color:var(--muted)}
+}
 
 details.rules{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:14px 18px}
 details.rules>summary{cursor:pointer;font-family:var(--serif);font-weight:700;font-size:17px}
@@ -189,7 +204,7 @@ footer a{color:inherit}
     </div>
   </details>
 
-  <footer>수정본은 원본을 덮어쓰지 않고 새 파일로 저장됩니다. 처음 몇 편은 수정본을 한글에서 열어 확인해 주세요.<br>v1.2 (2026-11-07) · 미술사연구회 출판부 · <a href="https://github.com/pudgala-appraiser/misulsayeongu">소스와 판정 기준</a></footer>
+  <footer>수정본은 원본을 덮어쓰지 않고 새 파일로 저장됩니다. 처음 몇 편은 수정본을 한글에서 열어 확인해 주세요.<br>v1.3 (2026-11-07) · 미술사연구회 출판부 · <a href="https://github.com/pudgala-appraiser/misulsayeongu">소스와 판정 기준</a></footer>
 </div>
 
 <script src="../lib/jszip.min.js"></script>
@@ -678,7 +693,7 @@ function renderCard(res){
         el('td', {}, el('span', {class:'tag ' + (x.repl !== undefined ? 'auto' : 'man'), text: x.repl !== undefined ? '자동' : '확인'})),
         el('td', {class:'loc', text: n > 1 ? `${n.toLocaleString()}건 · 처음 ${x.loc}` : x.loc}), el('td', {}, charCell(x.c, x.s)), ctx, fix));
     });
-    const table = el('table', {}, el('thead', {}, el('tr', {}, ...['처리','위치','문자','문맥','수정안'].map(t => el('th', {text:t})))), tb);
+    const table = el('table', {class:'items'}, el('thead', {}, el('tr', {}, ...['처리','위치','문자','문맥','수정안'].map(t => el('th', {text:t})))), tb);
     d.append(el('div', {class:'tbl'}, table));
     card.append(d); sec.groups.push(d);
   });
